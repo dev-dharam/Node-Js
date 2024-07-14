@@ -13,9 +13,14 @@ app.use(express.urlencoded({extended: false}))
 app.use((req, res, next) => {
     // console.log("Hello From Middleware");
 
-    fs.appendFile("./log.txt", `/n${Date.now()}: ${req.method}: ${req.ip} `, (err, data) => {
-        next()
-    });
+    // fs.appendFile("./log.txt", `/n${Date.now()}: ${req.method}: ${req.ip} `, (err, data) => {
+    //     next()
+    // });
+
+    // REMEMBER IF YOY WANT TO ADD CUSOMT HEADER THEN ALSO ADD "X-" LIKE X-HEADERNAME BCZ THIS IS GOOD PRACTICE
+    res.setHeader("X-myHeader", "Dharam")
+    console.log(req.headers)
+    next();
 
 })
 
