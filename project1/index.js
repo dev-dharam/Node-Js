@@ -1,121 +1,85 @@
 const express = require('express');
-const fs = require('fs')
-const app = express();
-const Data = require('./MOCK_DATA.json');
+const mongoose = require('mongoose')
 const port = 8000;
 
+const app = express();
+
+// MIDDLEWARE
+app.use(express.urlencoded({extends: true}));
 
 
+// Schema
 
-// MIDDLWARE
-app.use(express.urlencoded({extended: false}))
+const UserSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    password: {
+        type: String
+    }
+}, {timestamps: true});
 
-app.use((req, res, next) => {
-    // console.log("Hello From Middleware");
 
-    // fs.appendFile("./log.txt", `/n${Date.now()}: ${req.method}: ${req.ip} `, (err, data) => {
-    //     next()
-    // });
+const usermodel = mongoose.model("users", UserSchema);
 
-    // REMEMBER IF YOY WANT TO ADD CUSOMT HEADER THEN ALSO ADD "X-" LIKE X-HEADERNAME BCZ THIS IS GOOD PRACTICE
-    res.setHeader("X-myHeader", "Dharam")
-    console.log(req.headers)
-    next();
+
+// MONGODB CONNECT
+mongoose.connect("mongodb://127.0.0.1:27017/newpro").then(() => console.log("Database connected")).catch(() => console.log("Error in mongodb"));
+
+
+// ROUTES
+
+app.get("/api/users", async (req, res) => {
+    const users = await usermodel.find();
+
+    return res.status(200).json({success: true, message: "All users", allusers: users});
 
 })
 
-app.use((req, res, next) => {
-    // console.log("Hello From Middleware 2");
 
-    return res.end("End")
+app.post("/api/user/add", async (req, res) => {
+    const body = req.body;
+
+    if(!body || !body.name || !body.email || !body.password){
+        return res.send("Please Fill the fields!");
+    }
+
+    await usermodel.create({
+        name: body.name,
+        email: body.email,
+        password: body.password
+    });
+
+    return res.status(200).json({success: true, message: "User created"});
+
 })
 
-
-// ROUTING
-
-// app.get("/users", (req, res) => {
-//     return res.send(`<ul>
-//         ${
-//             Data.map((name) => `<li>${name.first_name}</li>`).join("")
-//         }
-//         </ul>`)
-// })
-
-
-app.get("/api/users", (req, res) => {
-    return res.json(Data)
-})
-
-// DYNAMIC ROUTE
-
-app.get("/api/user/:id", (req, res) => {
+app.patch("/api/user/update/:id", async(req, res) => {
     const id = req.params.id;
 
-    const user = Data.find((userid) => userid == id);
-    return res.send({userdetail: user});
+    // const user = usermodel.findById(id);
+    
+   await usermodel.findByIdAndUpdate(id, {password: "1234567"})
+
+    return res.status(200).json({success: true, message: "User updated"});
+
+})
+
+app.delete("/api/user/delete/:id", async (req, res) => {
+    const id = req.params.id;
+
+    // const user = usermodel.findById(id);
+    
+    await usermodel.findByIdAndDelete(id)
+
+    return res.status(200).json({success: true, message: "User deleted"});
 
 })
 
 
-
-// POST REQUEST
-
-app.post("/api/users", (req, res) => {
-    const body = req.body;
-    console.log("Body", body);
-
-    Data.push({...body, id: Data.length + 1});
-
-    fs.writeFile('./MOCK_DATA.json', JSON.stringify(Data), (err) => {
-        return res.send({status: "Pending"})
-    })
-
-})
-
-
-// DELETE USER
-app.delete("/api/user/delete/:id", (req, res) => {
-    const userid = req.params.id;
-
-    const userindex = Data.findIndex((user) => user.id == userid);
-    console.log("userindex", userindex);
-
-    if(userindex !== -1){
-        Data.splice(userindex, 1)
-        fs.writeFile("./MOCK_DATA.json", JSON.stringify(Data, null, 2), (err) => {
-            if(err){
-                res.status(500).send({ status: "Error", message: "Failed to delete user" });
-            }
-
-            return res.send({ status: "Success", message: "User deleted successfully" });
-        })
-    }else{
-        return res.status(404).send({ status: "Error", message: "User not found" });
-    }
-})
-
-
-// UPDATE USER
-app.patch("/api/user/update/:id", (req, res) => {
-    const userid = req.params.id;
-    const body = req.body;
-    const userindex = Data.findIndex((user) => user.id == userid);
-
-    if(userid !== -1){
-
-        Data[userindex] = {...Data[userindex], ...body};
-
-        fs.writeFile("./MOCK_DATA.json", JSON.stringify(Data, null, 2), (err) => {
-            if(err){
-                return res.status(500).send({ status: "Error", message: "Failed to update user" });
-            }
-            return res.send({ status: "Success", message: "User updated successfully" });
-        })
-    }else{
-        return res.status(404).send({ status: "Error", message: "User not found" });
-    }
-
-})
-
-
-app.listen(port, () => console.log("Server Created"));
+app.listen(port, () => {console.log("Server is created!")});
